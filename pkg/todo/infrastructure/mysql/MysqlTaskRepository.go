@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"database/sql"
+	log "github.com/sirupsen/logrus"
 	"todolist/pkg/todo/app/model"
 )
 
@@ -19,7 +21,12 @@ func (m TaskRepository) InsertTodo(description string) error {
 	if err != nil {
 		return err
 	}
-	defer query.Close()
+	defer func(query *sql.Rows) {
+		err := query.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}(query)
 	return nil
 }
 
@@ -28,7 +35,12 @@ func (m TaskRepository) MarkTaskAsCompleted(id string, isCompleted bool) error {
 	if err != nil {
 		return err
 	}
-	defer query.Close()
+	defer func(query *sql.Rows) {
+		err := query.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}(query)
 	return nil
 }
 
@@ -45,7 +57,12 @@ func (m TaskRepository) getCompleted(isCompleted bool) ([]model.Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}(rows)
 
 	tasks := make([]model.Task, 0)
 	for rows.Next() {
@@ -70,6 +87,11 @@ func (m TaskRepository) DeleteTask(id string) error {
 	if err != nil {
 		return err
 	}
-	defer query.Close()
+	defer func(query *sql.Rows) {
+		err := query.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}(query)
 	return nil
 }

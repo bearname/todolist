@@ -14,13 +14,40 @@ func main() {
 	file, err := os.OpenFile("todolist.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err == nil {
 		log.SetOutput(file)
-		defer file.Close()
+		defer func(file *os.File) {
+			err := file.Close()
+			if err != nil {
+				log.Error(err)
+			}
+		}(file)
 	}
 
 	config, err := parseConfig()
 	if err != nil {
 		log.Info("Default settings" + err.Error())
 	}
+	connector, done := getConnector(err, config)
+	if done {
+		return
+	}
+
+	server := infrastructure.Server{}
+	killSignalChan := server.GetKillSignalChan()
+
+	serverUrl := ":8000"
+	log.WithFields(log.Fields{"url": serverUrl}).Info("starting the server")
+
+	srv := server.StartServer(serverUrl, connector)
+
+	server.WaitForKillSignal(killSignalChan)
+	err = srv.Shutdown(context.Background())
+	if err != nil {
+		log.Error(err)
+		return
+	}
+}
+
+func getConnector(err error, config *config) (mysql.Connector, bool) {
 	var connector mysql.Connector
 	if err == nil {
 		log.Info("config " + config.DbName + config.DbUser + config.DbPassword + config.DbAddress + config.DbMigrationsDir)
@@ -29,7 +56,7 @@ func main() {
 		log.Info("*mysql.NewConnector")
 		if err != nil {
 			log.Error("unable to connect to database" + err.Error())
-			return
+			return mysql.Connector{}, true
 		}
 		defer connector.Close()
 	} else {
@@ -39,22 +66,13 @@ func main() {
 		err = connector.Connect("root", "123", "127.0.0.1", "todo")
 		if err != nil {
 			log.Error("unable to connect to database" + err.Error())
-			return
+			return mysql.Connector{}, true
 		}
 		defer connector.Close()
 	}
-
-	server := infrastructure.Server{}
-	killSignalChan := server.GetKillSignalChan()
-
-	serverUrl := ":8000"
-	log.WithFields(log.Fields{"url": serverUrl}).Info("starting the server")
 	err = mysql.Migrate(connector, config.DbMigrationsDir)
 	if err != nil {
 		log.Error(err)
 	}
-	srv := server.StartServer(serverUrl, connector)
-
-	server.WaitForKillSignal(killSignalChan)
-	srv.Shutdown(context.Background())
+	return connector, false
 }

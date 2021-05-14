@@ -9,10 +9,6 @@ type Connector struct {
 	Database *sql.DB
 }
 
-const user = "root"
-const password = "123"
-const databaseName = "todo"
-
 func NewConnector(dbUser string, dbPassword string, dbAddress string, dbName string) *Connector {
 	var connector Connector
 	err := connector.Connect(dbUser, dbPassword, dbAddress, dbName)
@@ -50,27 +46,6 @@ func (c *Connector) Close() error {
 	}
 
 	c.Database = nil
-
-	return nil
-}
-
-
-func ExecTransaction(db *sql.DB, query string, args ...interface{}) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
