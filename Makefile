@@ -1,4 +1,4 @@
-all: go-build go-test build run
+all: test build run
 
 modules:
 	go mod tidy
@@ -20,3 +20,6 @@ run-docker:
 
 go-test:
 	go test ./...
+
+test:
+	newman run test/go.postman_collection.json

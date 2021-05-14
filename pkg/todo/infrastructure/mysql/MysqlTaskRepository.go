@@ -52,6 +52,20 @@ func (m TaskRepository) GetCompletedTask() ([]model.Task, error) {
 	return m.getCompleted(true)
 }
 
+func (m TaskRepository) DeleteTask(id string) error {
+	query, err := m.connector.Database.Query("DELETE FROM task WHERE id_task = ?;", id)
+	if err != nil {
+		return err
+	}
+	defer func(query *sql.Rows) {
+		err := query.Close()
+		if err != nil {
+			log.Error(err)
+		}
+	}(query)
+	return nil
+}
+
 func (m TaskRepository) getCompleted(isCompleted bool) ([]model.Task, error) {
 	rows, err := m.connector.Database.Query("SELECT id_task, description, status, created_date FROM task WHERE status = ?;", isCompleted)
 	if err != nil {
@@ -80,18 +94,4 @@ func (m TaskRepository) getCompleted(isCompleted bool) ([]model.Task, error) {
 	}
 
 	return tasks, nil
-}
-
-func (m TaskRepository) DeleteTask(id string) error {
-	query, err := m.connector.Database.Query("DELETE FROM task WHERE id_task = ?;", id)
-	if err != nil {
-		return err
-	}
-	defer func(query *sql.Rows) {
-		err := query.Close()
-		if err != nil {
-			log.Error(err)
-		}
-	}(query)
-	return nil
 }

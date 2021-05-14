@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"todolist/pkg/todo/app/model"
 	"todolist/pkg/todo/app/repository"
+	"todolist/pkg/todo/infrastructure/util"
 )
 
 type TaskController struct {
 	repository repository.TaskRepository
+	BaseController
 }
 
 func NewTaskController(repository repository.TaskRepository) *TaskController {
@@ -24,21 +26,25 @@ func (c *TaskController) CreateBook(writer http.ResponseWriter, request *http.Re
 	var t model.TaskDto
 	err := decoder.Decode(&t)
 	if err != nil {
-		Error(writer, err, http.StatusInternalServerError)
+		c.BaseController.Error(writer, err, http.StatusInternalServerError)
 		return
 	}
 	log.Println(t.Description + " ")
 	if len(t.Description) > 1000 {
-		Error(writer, err, http.StatusNotFound)
+		c.BaseController.Error(writer, err, http.StatusNotFound)
 		return
 	}
 	book := c.repository.InsertTodo(t.Description)
-	JsonResponse(writer, book)
+	c.BaseController.JsonResponse(writer, book)
 }
 
 func (c *TaskController) MarkTaskAsCompleted(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	id := vars["id"]
+
+	if c.validateId(writer, id) {
+		return
+	}
 	err := c.repository.MarkTaskAsCompleted(id, true)
 
 	var result bool
@@ -48,7 +54,16 @@ func (c *TaskController) MarkTaskAsCompleted(writer http.ResponseWriter, request
 		result = true
 	}
 
-	JsonResponse(writer, result)
+	c.BaseController.JsonResponse(writer, result)
+}
+
+func (c *TaskController) validateId(writer http.ResponseWriter, id string) bool {
+	if !util.IsValidUUID(id) {
+		writer.WriteHeader(http.StatusBadRequest)
+		writer.Write([]byte("Invalid id"))
+		return true
+	}
+	return false
 }
 
 func (c *TaskController) GetNotCompletedTask(writer http.ResponseWriter, _ *http.Request) {
@@ -70,21 +85,24 @@ func (c *TaskController) completedTask(writer http.ResponseWriter, isCompleted b
 
 	}
 	if err != nil {
-		Error(writer, err, http.StatusInternalServerError)
+		c.BaseController.Error(writer, err, http.StatusInternalServerError)
 		return
 	}
 	jsonTasks, err := json.Marshal(task)
 	if err != nil {
-		Error(writer, err, http.StatusBadRequest)
+		c.BaseController.Error(writer, err, http.StatusBadRequest)
 		return
 	}
 
-	JsonResponse(writer, string(jsonTasks))
+	c.BaseController.JsonResponse(writer, string(jsonTasks))
 }
 
 func (c *TaskController) DeleteTask(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 	id := vars["id"]
+	if c.validateId(writer, id) {
+		return
+	}
 	err := c.repository.DeleteTask(id)
 
 	var result bool
@@ -94,5 +112,5 @@ func (c *TaskController) DeleteTask(writer http.ResponseWriter, request *http.Re
 		result = true
 	}
 
-	JsonResponse(writer, result)
+	c.BaseController.JsonResponse(writer, result)
 }
