@@ -1,0 +1,37 @@
+version: "3.3"
+
+services:
+  todolist:
+    container_name: "todolist"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 127.0.0.1:8000:8000
+    environment:
+      SERVE_REST_ADDRESS: ":8000"
+      DATABASE_NAME: todo
+      DATABASE_ADDRESS: "todo-mysql:3306"
+      DATABASE_USER: todo
+      DATABASE_PASSWORD: 1234
+    depends_on:
+      - todo-mysql
+  todo-mysql:
+    image: mysql:8.0
+    container_name: todo-mysql
+    hostname: todo-mysql
+    volumes:
+      - todo-mysql-data:/var/lib/mysql:rw
+    ports:
+      - 127.0.0.1:3306:3306
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: todo
+      MYSQL_USER: todo
+      MYSQL_PASSWORD: 1234
+    healthcheck:
+      test: mysql -h127.0.0.1 -utodo -p1234 -e 'SELECT 1'
+      interval: 10s
+      timeout: 1s
+volumes:
+  todo-mysql-data:
